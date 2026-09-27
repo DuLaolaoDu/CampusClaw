@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    image: campusclaw:dev
+    container_name: campusclaw-app
+    # No host port publishing: the Flask API is reachable only inside the
+    # internal compose network (by edge proxy and its own healthcheck).
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    volumes:
+      - campusclaw-data:/app/data
+    command: python -m flask --app app run --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  edge:
+    image: nginx:alpine
+    container_name: campusclaw-edge
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  campusclaw-data:

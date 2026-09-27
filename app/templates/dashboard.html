@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>CampusClaw · 材料中心</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: #f4f6fb; color: #1a1a2e; }
+  header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+           color: #fff; padding: 16px 32px; display: flex; align-items: center;
+           justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .who { font-size: 13px; opacity: .9; }
+  .who b { background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 6px; }
+  .hdr-form { display: inline-flex; align-items: center; gap: 8px; margin-left: 16px; }
+  .hdr-form select { padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4);
+                     background: rgba(255,255,255,0.15); color: #fff; font-size: 13px; }
+  .hdr-form select option { color: #1a1a2e; }
+  .hdr-form button { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+                     color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+                     font-size: 13px; }
+  .hdr-form button:hover { background: rgba(255,255,255,0.3); }
+
+  main { max-width: 900px; margin: 32px auto; padding: 0 24px; }
+
+  .flash { max-width: 852px; margin: 0 auto 16px; padding: 12px 16px; border-radius: 8px; font-size: 14px; }
+  .flash.error { background: #fed7d7; color: #9b2c2c; }
+  .flash.ok { background: #c6f6d5; color: #276749; }
+
+  .upload-card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 28px;
+                 box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .upload-card h2 { margin: 0 0 16px; font-size: 16px; color: #2d3748; }
+  .upload-card label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
+  .upload-card input[type=text], .upload-card textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+    font-size: 14px; margin-bottom: 12px; font-family: inherit;
+  }
+  .upload-card input[type=text]:focus, .upload-card textarea:focus {
+    outline: none; border-color: #667eea;
+  }
+  .upload-card input[type=file] { font-size: 13px; margin-bottom: 12px; }
+  .upload-card textarea { min-height: 100px; resize: vertical; }
+  .upload-card button {
+    background: #667eea; color: #fff; border: none; padding: 10px 20px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .upload-card button:hover { background: #5a6fd6; }
+
+  .list-card { background: #fff; border-radius: 12px; padding: 24px;
+               box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .list-card h2 { margin: 0 0 18px; font-size: 16px; color: #2d3748;
+                  display: flex; align-items: center; justify-content: space-between; }
+  .list-card h2 span.sub { font-size: 13px; color: #a0aec0; font-weight: 400; }
+
+  .empty { text-align: center; padding: 40px; color: #a0aec0; font-size: 14px; }
+
+  .item { padding: 16px 0; border-top: 1px solid #edf2f7; }
+  .item:first-of-type { border-top: none; padding-top: 0; }
+  .item h3 { margin: 0 0 6px; font-size: 15px; color: #1a202c; }
+  .item .meta { font-size: 12px; color: #a0aec0; margin-bottom: 8px; }
+  .item .meta b { color: #667eea; font-weight: 500; }
+  .item p { margin: 0; color: #4a5568; font-size: 14px; line-height: 1.6;
+            white-space: pre-wrap; }
+
+  .file-line { font-size: 13px; color: #2d3748; margin-bottom: 8px; }
+  .file-line a { color: #667eea; text-decoration: none; font-weight: 500; }
+  .file-line a:hover { text-decoration: underline; }
+  details.preview-box { margin-bottom: 6px; }
+  details.preview-box summary { font-size: 12px; color: #667eea; cursor: pointer;
+                                user-select: none; width: fit-content; }
+  .preview { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+             padding: 12px; font-size: 13px; color: #4a5568; max-height: 300px;
+             overflow: auto; white-space: pre-wrap; margin: 8px 0 4px;
+             font-family: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 CampusClaw 材料中心</h1>
+  <div>
+    <span class="who">
+      你好，<b>{{ user.username }}</b>
+      角色<b>{{ '教师' if user.role == 'teacher' else '学生' }}</b>
+      班级<b>{{ user.effective_class }}</b>
+    </span>
+    {% if user.role == 'teacher' and taught_classes %}
+    <form class="hdr-form" method="post" action="/class/switch">
+      <select name="class_id" aria-label="切换生效班级">
+        {% for cid in taught_classes %}
+        <option value="{{ cid }}" {{ 'selected' if cid == user.effective_class }}>{{ cid }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">切换班级</button>
+    </form>
+    {% endif %}
+    <form class="hdr-form" method="post" action="/logout">
+      <button type="submit">登出</button>
+    </form>
+  </div>
+</header>
+
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if user.role == 'teacher' %}
+  <!-- 上传区（仅教师可见） -->
+  <div class="upload-card">
+    <h2>✏️ 上传新材料</h2>
+    <form method="post" action="/materials" enctype="multipart/form-data">
+      <label>标题</label>
+      <input type="text" name="title" required placeholder="例如：第三章 函数的极限">
+      <label>附件（可选，支持 .txt / .md / .pdf，不超过 10MB）</label>
+      <input type="file" name="file" accept=".txt,.md,.pdf">
+      <label>内容（上传附件时可不填，系统自动提取文件文本）</label>
+      <textarea name="content" placeholder="粘贴教学材料正文…"></textarea>
+      <button type="submit">立即上传</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 列表区（服务端渲染） -->
+  <div class="list-card">
+    <h2>📖 本班材料（{{ user.effective_class }}）
+      <span class="sub">{% if materials %}共 {{ materials|length }} 条{% endif %}</span>
+    </h2>
+    {% if not materials %}
+    <div class="empty">本班暂无材料。</div>
+    {% endif %}
+    {% for m in materials %}
+    <div class="item">
+      <h3>{{ m.title }}</h3>
+      <div class="meta">
+        上传者 <b>user #{{ m.owner_id }}</b> ·
+        班级 <b>{{ m.class_id }}</b> ·
+        {{ m.created_at or '' }}
+      </div>
+      {% if m.file_orig_name %}
+      <div class="file-line">📄 {{ m.file_orig_name }} ({{ m.file_size|filesize }}) ·
+        <a href="/materials/{{ m.id }}/download">下载</a></div>
+        {% if m.content %}
+        <details class="preview-box">
+          <summary>▾ 展开预览</summary>
+          <pre class="preview">{{ m.content }}</pre>
+        </details>
+        {% else %}
+        <div class="meta">（该文件没有可提取的文本内容）</div>
+        {% endif %}
+      {% elif m.content %}
+      <p>{{ m.content }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</main>
+</body>
+</html>

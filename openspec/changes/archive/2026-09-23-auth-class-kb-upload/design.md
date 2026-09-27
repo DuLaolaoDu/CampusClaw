@@ -30,7 +30,7 @@ CampusClaw 是 greenfield 校园教学辅助项目，尚无现有代码。本次
 | 后端框架 | **Flask 3.x** | 教学场景轻量够用；session/flash/Blueprint 开箱即用；学习成本低 | FastAPI（更现代但偏重）、Django（太重） |
 | 数据库 | **SQLite 3** | 单文件、零配置、Docker 内直接挂载卷；教学演示无需独立 db 服务 | PostgreSQL（生产更强但多一容器）、文件系统（无查询能力） |
 | 访问方式 | **raw sqlite3 标准库** | 避免额外 ORM 依赖；SQL 直写清晰易教 | Flask-SQLAlchemy（功能强但多一层抽象） |
-| 密码哈希 | **passlib[bcrypt]** | 成熟稳定；Windows 本地开发无额外依赖 | argon2（更安全但 Windows 编译复杂） |
+| 密码哈希 | **bcrypt 原生 API**（`bcrypt>=4.1,<5`） | 直接调 bcrypt.hashpw / bcrypt.checkpw，少一层依赖；Windows 无编译问题（需 <5 因 passlib 与 bcrypt 5.x 不兼容） | argon2（更安全但 Windows 编译复杂） |
 | 会话 | **Flask 内置 session**（itsdangerous 签名 Cookie） | 无状态 cookie、无需 Redis；Flask 自带；密钥从 APP_SECRET 读 | JWT（无状态但需要额外库）、Session+Redis（多一依赖） |
 | 种子执行 | **应用启动时自动检测** | db 文件不存在 → 运行 seed；否则跳过 | 独立初始化命令（需要手动操作） |
 
@@ -48,7 +48,7 @@ scripts/
   seed.py              # 预置数据写入（users + materials 样本）
 Dockerfile             # python:3.12-slim
 docker-compose.yml     # 单 app 服务 + volume 持久化 db
-requirements.txt       # flask、passlib[bcrypt]、itsdangerous
+requirements.txt       # flask、bcrypt（原生 API）
 .env.example           # APP_SECRET、DATABASE_PATH
 README.md              # 项目说明，开头三行为项目名 + 一句话描述 + 快速启动
 ```
@@ -59,7 +59,7 @@ README.md              # 项目说明，开头三行为项目名 + 一句话描�
 登录流程：
   POST /api/auth/login {username, password}
     → 查 users 表匹配 username
-    → passlib.verify(password, stored_hash)
+    → bcrypt.checkpw(password.encode(), stored_hash.encode())
     → Flask session["user_id"] = id
     → Flask session["role"]  = role
     → Flask session["class_id"] = class_id
@@ -233,7 +233,7 @@ def health():
 
 ### 种子数据（users + materials 双表预置）
 
-`scripts/seed.py` 通过 passlib 对预置密码 bcrypt 哈希后写入 users 表，并同步写入 materials 表的样本材料。所有密码哈希值在首次容器启动时生成，**绝不明文写入任何文件**。
+`scripts/seed.py` 通过 `bcrypt.hashpw` 对预置密码哈希后写入 users 表，并同步写入 materials 表的样本材料。所有密码哈希值在首次容器启动时生成，**绝不明文写入任何文件**。
 
 **预置 users（class_id 统一为 `"class-001"`）：**
 | username | 初始密码 | role | class_id |
